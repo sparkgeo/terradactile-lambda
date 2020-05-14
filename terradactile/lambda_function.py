@@ -1,0 +1,140 @@
+import tempfile
+from os.path import join, splitext, dirname
+from os import listdir, mkdir
+import urllib.request
+import io
+import subprocess
+import shutil
+from math import log, tan, pi
+from itertools import product
+import sys
+from osgeo import gdal
+import boto3
+import json
+import uuid
+
+print('Loading function')
+
+s3 = boto3.resource("s3")
+
+tile_url = "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{z}/{x}/{y}.tif"
+s3_bucket = "terradactile"
+
+def respond(err, res=None):
+    return {
+        'statusCode': '400' if err else '200',
+        'body': err.message if err else json.dumps(res),
+        'headers': {
+            'Content-Type': 'application/json',
+        },
+    }
+
+def download(output_path, tiles, verbose=True):
+    ''' Download list of tiles to a temporary directory and return its name.
+    '''
+    dir = dirname(output_path)
+    _, ext = splitext(output_path)
+    merge_geotiff = bool(ext.lower() in ('.tif', '.tiff', '.geotiff'))
+
+    files = []
+
+    for (z, x, y) in tiles:
+        response = urllib.request.urlopen(tile_url.format(z=z, x=x, y=y))
+        if response.getcode() != 200:
+            raise RuntimeError('No such tile: {}'.format((z, x, y)))
+        if verbose:
+            print('Downloaded', response.url, file=sys.stderr)
+        with io.open(join(dir, '{}-{}-{}.tif'.format(z, x, y)), 'wb') as file:
+            file.write(response.read())
+            files.append(file.name)
+
+    if merge_geotiff:
+        if verbose:
+            print('Combining', len(files), 'into', output_path, '...', file=sys.stderr)
+        vrt = gdal.BuildVRT("/tmp/mosaic.vrt", files)
+        opts = gdal.WarpOptions(format="GTiff")
+        mosaic = gdal.Warp(output_path, vrt, options=opts)
+        mosaic.FlushCache()
+        mosaic = None
+    else:
+        if verbose:
+            print('Moving', dir, 'to', output_path, '...', file=sys.stderr)
+        shutil.move(dir, output_path)
+
+            
+def mercator(lat, lon, zoom):
+    ''' Convert latitude, longitude to z/x/y tile coordinate at given zoom.
+    '''
+    # convert to radians
+    x1, y1 = lon * pi/180, lat * pi/180
+
+    # project to mercator
+    x2, y2 = x1, log(tan(0.25 * pi + 0.5 * y1))
+
+    # transform to tile space
+    tiles, diameter = 2 ** zoom, 2 * pi
+    x3, y3 = int(tiles * (x2 + pi) / diameter), int(tiles * (pi - y2) / diameter)
+
+    return zoom, x3, y3
+
+def tiles(zoom, lat1, lon1, lat2, lon2):
+    ''' Convert geographic bounds into a list of tile coordinates at given zoom.
+    '''
+    # convert to geographic bounding box
+    minlat, minlon = min(lat1, lat2), min(lon1, lon2)
+    maxlat, maxlon = max(lat1, lat2), max(lon1, lon2)
+
+    # convert to tile-space bounding box
+    _, xmin, ymin = mercator(maxlat, minlon, zoom)
+    _, xmax, ymax = mercator(minlat, maxlon, zoom)
+
+    # generate a list of tiles
+    xs, ys = range(xmin, xmax+1), range(ymin, ymax+1)
+    tiles = [(zoom, x, y) for (y, x) in product(ys, xs)]
+    
+    return tiles
+    
+def write_to_s3(tmp_path, s3_path):
+    s3.meta.client.upload_file(tmp_path, s3_bucket, s3_path)
+
+def lambda_handler(event, context):
+    print(f"EVENT: {event}")
+    
+    body = json.loads(event['body'])
+    print(f"BODY: {body}")
+    
+    req_tiles = tiles(
+        body.get("z"),
+        body.get("y1"),
+        body.get("x1"),
+        body.get("y2"),
+        body.get("x2"),
+    )
+    
+    s3_folder = str(uuid.uuid4())
+    mkdir(f"/tmp/{s3_folder}")
+    
+    mosaic_path = f'/tmp/{s3_folder}/mos.tif'
+    download(mosaic_path, req_tiles)
+    
+    write_to_s3(mosaic_path, f'{s3_folder}/mosaic.tif')
+    
+    ds = gdal.Open(mosaic_path)
+    
+    hillshade_path = "/tmp/hs.tif"
+    gdal.DEMProcessing(
+        destName=hillshade_path,
+        srcDS=ds,
+        processing="hillshade",
+        format="GTiff",
+        zFactor=1,
+        scale=1,
+        azimuth=315,
+        altitude=45
+    )
+    
+    ds = None
+    
+    write_to_s3(hillshade_path, f'{s3_folder}/hillshade.tif')
+    
+    return respond(None, f"s3://{s3_bucket}/{s3_folder}")
