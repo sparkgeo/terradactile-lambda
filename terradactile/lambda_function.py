@@ -23,7 +23,7 @@ s3_bucket = "terradactile"
 def respond(err, res=None):
     return {
         'statusCode': '400' if err else '200',
-        'body': err.message if err else json.dumps(res),
+        'body': err if err else json.dumps(res),
         'headers': {
             'Content-Type': 'application/json',
         },
@@ -94,6 +94,45 @@ def tiles(zoom, lat1, lon1, lat2, lon2):
     
     return tiles
     
+def tif_to_cog(input_tif, output_cog):
+    data = gdal.Open(input_tif)
+    data_geotrans = data.GetGeoTransform()
+    data_proj = data.GetProjection()
+    data_array = data.ReadAsArray()
+    
+    x_size = data.RasterXSize
+    y_size = data.RasterYSize
+    num_bands = data.RasterCount
+    datatype = data.GetRasterBand(1).DataType
+    data = None
+    
+    driver = gdal.GetDriverByName('MEM')
+    data_set = driver.Create('', x_size, y_size, num_bands, datatype)
+
+    for i in range(num_bands):
+        data_set_lyr = data_set.GetRasterBand(i + 1)
+        if len(data_array.shape) == 2:
+            data_set_lyr.WriteArray(data_array)
+        else:
+            data_set_lyr.WriteArray(data_array[i])
+
+    data_set.SetGeoTransform(data_geotrans)
+    data_set.SetProjection(data_proj)
+    data_set.BuildOverviews("NEAREST", [2, 4, 8, 16, 32, 64])
+    
+    driver = gdal.GetDriverByName('GTiff')
+    data_set2 = driver.CreateCopy(
+        output_cog,
+        data_set,
+        options = [
+                "COPY_SRC_OVERVIEWS=YES",
+                "TILED=YES",
+                "COMPRESS=LZW"
+            ]
+        )
+    data_set = None
+    data_set2 = None
+
 def write_to_s3(tmp_path, s3_path):
     s3.meta.client.upload_file(tmp_path, s3_bucket, s3_path)
 
@@ -115,13 +154,22 @@ def lambda_handler(event, context):
     mkdir(f"/tmp/{s3_folder}")
     
     mosaic_path = f'/tmp/{s3_folder}/mos.tif'
-    download(mosaic_path, req_tiles)
+
+    tile_limit = 50
+    print(f"REQUESTING: {len(req_tiles)} tiles")
+    if len(req_tiles) > tile_limit:
+        return respond(f"Requested too many tiles ({len(req_tiles)} in total, limit is {tile_limit}). Try a lower zoom level or smaller bbox.")
+    else:
+        download(mosaic_path, req_tiles)
     
-    write_to_s3(mosaic_path, f'{s3_folder}/mosaic.tif')
+    mosaic_cog = f'/tmp/{s3_folder}/mos_cog.tif'
+    tif_to_cog(mosaic_path, mosaic_cog)
     
-    ds = gdal.Open(mosaic_path)
+    write_to_s3(mosaic_cog, f'{s3_folder}/mosaic.tif')
     
-    hillshade_path = "/tmp/hs.tif"
+    ds = gdal.Open(mosaic_cog)
+    
+    hillshade_path = f'/tmp/{s3_folder}/hs.tif'
     gdal.DEMProcessing(
         destName=hillshade_path,
         srcDS=ds,
@@ -135,6 +183,9 @@ def lambda_handler(event, context):
     
     ds = None
     
-    write_to_s3(hillshade_path, f'{s3_folder}/hillshade.tif')
+    hillshade_cog = f'/tmp/{s3_folder}/hillshade_cog.tif'
+    tif_to_cog(hillshade_path, hillshade_cog)
+    
+    write_to_s3(hillshade_cog, f'{s3_folder}/hillshade.tif')
     
     return respond(None, f"s3://{s3_bucket}/{s3_folder}")
