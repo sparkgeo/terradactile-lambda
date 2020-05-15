@@ -148,6 +148,27 @@ def translate_scale(input_tif, output_tif):
 def write_to_s3(tmp_path, s3_path):
     s3.meta.client.upload_file(tmp_path, s3_bucket, s3_path)
 
+def make_output(input_cog, output, s3_folder):
+    ds = gdal.Open(input_cog)
+
+    output_path = f'/tmp/{s3_folder}/{output}.tif'
+    gdal.DEMProcessing(
+        destName=output_path,
+        srcDS=ds,
+        processing=output,
+        format="GTiff",
+        zFactor=1,
+        scale=1,
+        azimuth=315,
+        altitude=45
+    )
+
+    ds = None
+    
+    output_cog = f'/tmp/{s3_folder}/{output}_cog.tif'
+    tif_to_cog(output_path, output_cog)
+    write_to_s3(output_cog, f'{s3_folder}/{output}.tif')
+
 def lambda_handler(event, context):
     print(f"EVENT: {event}")
     
@@ -182,25 +203,10 @@ def lambda_handler(event, context):
     translate_scale(mosaic_cog, mosaic_display)
     write_to_s3(mosaic_display, f'{s3_folder}/mosaic_display.tif')
     
-    ds = gdal.Open(mosaic_cog)
-    
-    hillshade_path = f'/tmp/{s3_folder}/hs.tif'
-    gdal.DEMProcessing(
-        destName=hillshade_path,
-        srcDS=ds,
-        processing="hillshade",
-        format="GTiff",
-        zFactor=1,
-        scale=1,
-        azimuth=315,
-        altitude=45
-    )
-    
-    ds = None
-    
-    hillshade_cog = f'/tmp/{s3_folder}/hillshade_cog.tif'
-    tif_to_cog(hillshade_path, hillshade_cog)
-    
-    write_to_s3(hillshade_cog, f'{s3_folder}/hillshade.tif')
-    
+    outputs = body.get("outputs", [])
+    outputs.append("hillshade")
+
+    for output in outputs:
+        make_output(mosaic_cog, output, s3_folder)
+
     return respond(None, f"s3://{s3_bucket}/{s3_folder}")
