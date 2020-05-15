@@ -26,6 +26,7 @@ def respond(err, res=None):
         'body': err if err else json.dumps(res),
         'headers': {
             'Content-Type': 'application/json',
+            "Access-Control-Allow-Origin" : "https://terradactile.netlify.app"
         },
     }
 
@@ -133,6 +134,17 @@ def tif_to_cog(input_tif, output_cog):
     data_set = None
     data_set2 = None
 
+def translate_scale(input_tif, output_tif):
+    ds = gdal.Open(input_tif)
+    ds = gdal.Translate(
+        output_tif,
+        ds,
+        format='GTiff',
+        outputType=1,
+        scaleParams=[[]]
+    )
+    ds = None
+
 def write_to_s3(tmp_path, s3_path):
     s3.meta.client.upload_file(tmp_path, s3_bucket, s3_path)
 
@@ -164,8 +176,11 @@ def lambda_handler(event, context):
     
     mosaic_cog = f'/tmp/{s3_folder}/mos_cog.tif'
     tif_to_cog(mosaic_path, mosaic_cog)
-    
     write_to_s3(mosaic_cog, f'{s3_folder}/mosaic.tif')
+    
+    mosaic_display = f'/tmp/{s3_folder}/mos_display_cog.tif'
+    translate_scale(mosaic_cog, mosaic_display)
+    write_to_s3(mosaic_display, f'{s3_folder}/mosaic_display.tif')
     
     ds = gdal.Open(mosaic_cog)
     
