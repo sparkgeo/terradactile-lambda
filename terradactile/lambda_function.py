@@ -12,6 +12,8 @@ from osgeo import gdal
 import boto3
 import json
 import uuid
+import csv
+from pyproj import Proj, transform
 
 print('Loading function')
 
@@ -30,7 +32,12 @@ def respond(err, res=None):
         },
     }
 
-def download(output_path, tiles, verbose=True):
+def reproject_point(x1, y1, in_epsg, out_epsg):
+    inProj = Proj(f'epsg:{in_epsg}')
+    outProj = Proj(f'epsg:{out_epsg}')
+    return transform(inProj, outProj, x1, y1, always_xy=True)
+
+def download(output_path, tiles, clip_bounds, verbose=True):
     ''' Download list of tiles to a temporary directory and return its name.
     '''
     dir = dirname(output_path)
@@ -53,8 +60,19 @@ def download(output_path, tiles, verbose=True):
         if verbose:
             print('Combining', len(files), 'into', output_path, '...', file=sys.stderr)
         vrt = gdal.BuildVRT("/tmp/mosaic.vrt", files)
-        opts = gdal.WarpOptions(format="GTiff")
-        mosaic = gdal.Warp(output_path, vrt, options=opts)
+        
+        minX, minY = reproject_point(clip_bounds[0], clip_bounds[1], 4326, 3857)
+        maxX, maxY = reproject_point(clip_bounds[2], clip_bounds[3], 4326, 3857)
+        wkt = f"POLYGON(({minX} {maxY}, {maxX} {maxY}, {maxX} {minY}, {minX} {minY}, {minX} {maxY}))"
+
+        out_csv = "/tmp/out.csv"
+        with open(out_csv, "w") as f:
+            fieldnames = ['id', 'wkt']
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerow({'id': 1, 'wkt': wkt})
+        
+        mosaic = gdal.Warp(output_path, vrt, cutlineDSName=out_csv, cropToCutline=True, format="GTiff")
         mosaic.FlushCache()
         mosaic = None
     else:
@@ -175,13 +193,20 @@ def lambda_handler(event, context):
     body = json.loads(event['body'])
     print(f"BODY: {body}")
     
-    req_tiles = tiles(
-        body.get("z"),
-        body.get("y1"),
-        body.get("x1"),
-        body.get("y2"),
-        body.get("x2"),
-    )
+    x1 = body.get("x1")
+    x2 = body.get("x2")
+    y1 = body.get("y1")
+    y2 = body.get("y2")
+    z = body.get("z")
+    print(f'COORDS: {x1, x2, y1, y2, z}')
+    minX = min([x1, x2])
+    maxX = max([x1, x2])
+    minY = min([y1, y2])
+    maxY = max([y1, y2])
+    print(f'CLIP COORDS: {minX, minY, maxX, maxY}')
+    clip_bounds = (minX, minY, maxX, maxY)
+    
+    req_tiles = tiles(z, y1, x1, y2, x2)
     
     s3_folder = str(uuid.uuid4())
     mkdir(f"/tmp/{s3_folder}")
@@ -193,7 +218,7 @@ def lambda_handler(event, context):
     if len(req_tiles) > tile_limit:
         return respond(f"Requested too many tiles ({len(req_tiles)} in total, limit is {tile_limit}). Try a lower zoom level or smaller bbox.")
     else:
-        download(mosaic_path, req_tiles)
+        download(mosaic_path, req_tiles, clip_bounds)
     
     mosaic_cog = f'/tmp/{s3_folder}/mos_cog.tif'
     tif_to_cog(mosaic_path, mosaic_cog)
