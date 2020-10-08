@@ -8,14 +8,17 @@ import shutil
 from math import log, tan, pi
 from itertools import product
 import sys
-from osgeo import gdal
 import boto3
 import json
 import uuid
 import csv
 from pyproj import Proj, transform
 
-print('Loading function')
+try:
+    from osgeo import gdal
+except Exception as e:
+    print(e, type(e))
+    import gdal
 
 s3 = boto3.resource("s3")
 
@@ -84,13 +87,10 @@ def download(output_path, tiles, clip_bounds, verbose=True):
 def mercator(lat, lon, zoom):
     ''' Convert latitude, longitude to z/x/y tile coordinate at given zoom.
     '''
-    # convert to radians
     x1, y1 = lon * pi/180, lat * pi/180
 
-    # project to mercator
     x2, y2 = x1, log(tan(0.25 * pi + 0.5 * y1))
 
-    # transform to tile space
     tiles, diameter = 2 ** zoom, 2 * pi
     x3, y3 = int(tiles * (x2 + pi) / diameter), int(tiles * (pi - y2) / diameter)
 
@@ -99,15 +99,12 @@ def mercator(lat, lon, zoom):
 def tiles(zoom, lat1, lon1, lat2, lon2):
     ''' Convert geographic bounds into a list of tile coordinates at given zoom.
     '''
-    # convert to geographic bounding box
     minlat, minlon = min(lat1, lat2), min(lon1, lon2)
     maxlat, maxlon = max(lat1, lat2), max(lon1, lon2)
 
-    # convert to tile-space bounding box
     _, xmin, ymin = mercator(maxlat, minlon, zoom)
     _, xmax, ymax = mercator(minlat, maxlon, zoom)
 
-    # generate a list of tiles
     xs, ys = range(xmin, xmax+1), range(ymin, ymax+1)
     tiles = [(zoom, x, y) for (y, x) in product(ys, xs)]
     
@@ -188,22 +185,19 @@ def make_output(input_cog, output, s3_folder):
     write_to_s3(output_cog, f'{s3_folder}/{output}.tif')
 
 def lambda_handler(event, context):
-    print(f"EVENT: {event}")
-    
+    print(event)
     body = json.loads(event['body'])
-    print(f"BODY: {body}")
     
     x1 = body.get("x1")
     x2 = body.get("x2")
     y1 = body.get("y1")
     y2 = body.get("y2")
     z = body.get("z")
-    print(f'COORDS: {x1, x2, y1, y2, z}')
+
     minX = min([x1, x2])
     maxX = max([x1, x2])
     minY = min([y1, y2])
     maxY = max([y1, y2])
-    print(f'CLIP COORDS: {minX, minY, maxX, maxY}')
     clip_bounds = (minX, minY, maxX, maxY)
     
     req_tiles = tiles(z, y1, x1, y2, x2)
@@ -214,7 +208,6 @@ def lambda_handler(event, context):
     mosaic_path = f'/tmp/{s3_folder}/mos.tif'
 
     tile_limit = 50
-    print(f"REQUESTING: {len(req_tiles)} tiles")
     if len(req_tiles) > tile_limit:
         return respond(f"Requested too many tiles ({len(req_tiles)} in total, limit is {tile_limit}). Try a lower zoom level or smaller bbox.")
     else:

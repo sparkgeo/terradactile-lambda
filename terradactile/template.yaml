@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  terradactile
+
+  Sample SAM Template for terradactile
+
+Globals:
+  Function:
+    Timeout: 120
+
+Resources:
+  TerradactileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: terradactile/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+      Layers:
+        - arn:aws:lambda:us-west-2:552188055668:layer:geolambda-python:3
+        - arn:aws:lambda:us-west-2:552188055668:layer:geolambda:4
+      Environment:
+        Variables:
+          GDAL_DATA: /opt/share/gdal
+          PROJ_LIB: /opt/share/proj
+      Events:
+        Terradactile:
+          Type: Api
+          Properties:
+            Path: /terradactile
+            Method: post
+
+Outputs:
+  TerradactileApi:
+    Description: "API Gateway endpoint URL for Prod stage for Terradactile function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/terradactile/"
+  TerradactileFunction:
+    Description: "Terradactile Lambda Function ARN"
+    Value: !GetAtt TerradactileFunction.Arn
+  TerradactileFunctionIamRole:
+    Description: "Implicit IAM Role created for Terradactile function"
+    Value: !GetAtt TerradactileFunctionRole.Arn
