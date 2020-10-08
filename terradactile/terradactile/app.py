@@ -1,9 +1,8 @@
 import tempfile
 from os.path import join, splitext, dirname
-from os import listdir, mkdir
+from os import listdir, mkdir, environ
 import urllib.request
 import io
-import subprocess
 import shutil
 from math import log, tan, pi
 from itertools import product
@@ -13,17 +12,12 @@ import json
 import uuid
 import csv
 from pyproj import Proj, transform
-
-try:
-    from osgeo import gdal
-except Exception as e:
-    print(e, type(e))
-    import gdal
+from osgeo import gdal
 
 s3 = boto3.resource("s3")
 
 tile_url = "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{z}/{x}/{y}.tif"
-s3_bucket = "terradactile"
+s3_bucket = environ.get("BUCKET")
 
 def respond(err, res=None):
     return {
@@ -31,7 +25,7 @@ def respond(err, res=None):
         'body': err if err else json.dumps(res),
         'headers': {
             'Content-Type': 'application/json',
-            "Access-Control-Allow-Origin" : "https://terradactile.netlify.app"
+            "Access-Control-Allow-Origin" : environ.get("ALLOWED_ORIGIN")
         },
     }
 

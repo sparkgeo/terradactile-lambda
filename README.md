@@ -5,7 +5,7 @@ Terradactile is an API and Lambda function for fetching, assembling, and process
 This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
 
 - terradactile/terradactile - Code for the application's Lambda function.
-- terradactile/template.yaml - A template that defines the application's AWS resources.
+- terradactile/template.yaml - A template that defines the application's AWS resources. **Update the environment variables for BUCKET and ALLOWED_ORIGIN.**
 
 The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
 

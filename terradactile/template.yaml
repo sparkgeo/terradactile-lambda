@@ -23,6 +23,8 @@ Resources:
         Variables:
           GDAL_DATA: /opt/share/gdal
           PROJ_LIB: /opt/share/proj
+          BUCKET: terradactile
+          ALLOWED_ORIGIN: https://terradactile.netlify.app
       Events:
         Terradactile:
           Type: Api
