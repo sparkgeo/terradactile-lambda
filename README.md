@@ -1,4 +1,4 @@
-# terradactile
+# Terradactile
 
 Terradactile is an API and Lambda function for fetching, assembling, and processing elevation data.
 
