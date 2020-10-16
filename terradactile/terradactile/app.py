@@ -19,13 +19,13 @@ s3 = boto3.resource("s3")
 tile_url = "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{z}/{x}/{y}.tif"
 s3_bucket = environ.get("BUCKET")
 
-def respond(err, res=None):
+def respond(err, res=None, origin=None):
     return {
         'statusCode': '400' if err else '200',
         'body': err if err else json.dumps(res),
         'headers': {
             'Content-Type': 'application/json',
-            "Access-Control-Allow-Origin" : environ.get("ALLOWED_ORIGIN")
+            "Access-Control-Allow-Origin" : origin
         },
     }
 
@@ -179,7 +179,12 @@ def make_output(input_cog, output, s3_folder):
     write_to_s3(output_cog, f'{s3_folder}/{output}.tif')
 
 def lambda_handler(event, context):
-    print(event)
+    origin = event["headers"]["origin"]
+    allowed_origins = [x.strip(' ') for x in environ.get("ALLOWED_ORIGINS").split(",")]
+
+    if origin not in allowed_origins:
+        return respond("Origin not in allowed origins!", None, "*")
+    
     body = json.loads(event['body'])
     
     x1 = body.get("x1")
@@ -221,4 +226,4 @@ def lambda_handler(event, context):
     for output in outputs:
         make_output(mosaic_cog, output, s3_folder)
 
-    return respond(None, f"s3://{s3_bucket}/{s3_folder}")
+    return respond(None, f"s3://{s3_bucket}/{s3_folder}", origin)

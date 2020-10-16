@@ -24,7 +24,7 @@ Resources:
           GDAL_DATA: /opt/share/gdal
           PROJ_LIB: /opt/share/proj
           BUCKET: terradactile
-          ALLOWED_ORIGIN: https://terradactile.netlify.app
+          ALLOWED_ORIGINS: "https://terradactile.netlify.app, https://terradactile.sparkgeo.com"
       Events:
         Terradactile:
           Type: Api
