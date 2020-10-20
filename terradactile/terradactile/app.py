@@ -25,7 +25,9 @@ def respond(err, res=None, origin=None):
         'body': err if err else json.dumps(res),
         'headers': {
             'Content-Type': 'application/json',
-            "Access-Control-Allow-Origin" : origin
+            "Access-Control-Allow-Origin" : origin,
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET',
+            'Access-Control-Allow-Headers': 'Content-Type'
         },
     }
 
@@ -44,14 +46,19 @@ def download(output_path, tiles, clip_bounds, verbose=True):
     files = []
 
     for (z, x, y) in tiles:
-        response = urllib.request.urlopen(tile_url.format(z=z, x=x, y=y))
-        if response.getcode() != 200:
-            raise RuntimeError('No such tile: {}'.format((z, x, y)))
-        if verbose:
-            print('Downloaded', response.url, file=sys.stderr)
-        with io.open(join(dir, '{}-{}-{}.tif'.format(z, x, y)), 'wb') as file:
-            file.write(response.read())
-            files.append(file.name)
+        try:
+            response = urllib.request.urlopen(tile_url.format(z=z, x=x, y=y))
+            if response.getcode() != 200:
+                print(('No such tile: {}'.format((z, x, y))))
+                pass
+            if verbose:
+                print('Downloaded', response.url, file=sys.stderr)
+            with io.open(join(dir, '{}-{}-{}.tif'.format(z, x, y)), 'wb') as file:
+                file.write(response.read())
+                files.append(file.name)
+        except urllib.error.URLError as e:
+            ResponseData = e.read().decode("utf8", 'ignore')
+            print(f"ERROR: {ResponseData}")
 
     if merge_geotiff:
         if verbose:
@@ -79,29 +86,17 @@ def download(output_path, tiles, clip_bounds, verbose=True):
 
             
 def mercator(lat, lon, zoom):
-    ''' Convert latitude, longitude to z/x/y tile coordinate at given zoom.
-    '''
     x1, y1 = lon * pi/180, lat * pi/180
-
     x2, y2 = x1, log(tan(0.25 * pi + 0.5 * y1))
-
     tiles, diameter = 2 ** zoom, 2 * pi
     x3, y3 = int(tiles * (x2 + pi) / diameter), int(tiles * (pi - y2) / diameter)
+    return x3, y3
 
-    return zoom, x3, y3
-
-def tiles(zoom, lat1, lon1, lat2, lon2):
-    ''' Convert geographic bounds into a list of tile coordinates at given zoom.
-    '''
-    minlat, minlon = min(lat1, lat2), min(lon1, lon2)
-    maxlat, maxlon = max(lat1, lat2), max(lon1, lon2)
-
-    _, xmin, ymin = mercator(maxlat, minlon, zoom)
-    _, xmax, ymax = mercator(minlat, maxlon, zoom)
-
+def tiles(z, minX, minY, maxX, maxY):
+    xmin, ymin = mercator(maxY, minX, z)
+    xmax, ymax = mercator(minY, maxX, z)
     xs, ys = range(xmin, xmax+1), range(ymin, ymax+1)
-    tiles = [(zoom, x, y) for (y, x) in product(ys, xs)]
-    
+    tiles = [(z, x, y) for (y, x) in product(ys, xs)]
     return tiles
     
 def tif_to_cog(input_tif, output_cog):
@@ -197,9 +192,9 @@ def lambda_handler(event, context):
     maxX = max([x1, x2])
     minY = min([y1, y2])
     maxY = max([y1, y2])
+
     clip_bounds = (minX, minY, maxX, maxY)
-    
-    req_tiles = tiles(z, y1, x1, y2, x2)
+    req_tiles = tiles(z, minX, minY, maxX, maxY)
     
     s3_folder = str(uuid.uuid4())
     mkdir(f"/tmp/{s3_folder}")
