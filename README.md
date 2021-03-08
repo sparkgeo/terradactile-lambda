@@ -3,7 +3,7 @@
   <a href="https://github.com/sparkgeo/template-barebones">
     <img src="./images/sparkgeo-logo.png">
   </a>
-  <h3 align="center">Terradactile-Lambda</h3>
+  <h3 align="center">Terradactile Lambda</h3>
 </p>
 
 
@@ -13,15 +13,14 @@
 * [About this Program](#about-the-project)
 * [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
-  * [Installation](#installation)
+  * [Installation and Deployment](#installation-and-deployment)
 * [Usage](#usage)
 * [Contributing](#contributing)
-* [License](#license)
 * [Contact](#contact)
 
 
 <!-- ABOUT THE PROJECT -->
-## About This Program
+# About This Program
 
 Terradactile is an API and Lambda function for fetching, assembling, and processing elevation data.
 
@@ -33,7 +32,7 @@ File Contents
 
 
 <!-- GETTING STARTED -->
-## Getting Started
+# Getting Started
 
 If you prefer to use an integrated development environment (IDE) to build and test your application, you can use the AWS Toolkit.  
 The AWS Toolkit is an open source plug-in for popular IDEs that uses the SAM CLI to build and deploy serverless applications on AWS. The AWS Toolkit also adds a simplified step-through debugging experience for Lambda function code. See the following links to get started.
@@ -55,8 +54,7 @@ To use the SAM CLI, you need the following tools.
 The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
 
 
-
-### Installation and Deployment
+# Installation and Deployment
 
 ## Deployment
 
@@ -72,7 +70,7 @@ sam deploy --guided
 
 
 <!-- USAGE EXAMPLES -->
-# Usage Commands
+# Usage
 The first command will build the source of your application. The second command will package and deploy your application to AWS, with a series of prompts:
 
 * **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
@@ -93,7 +91,7 @@ aws cloudformation delete-stack --stack-name terradactile
 
 
 <!-- CONTRIBUTING -->
-## Contributing
+# Contributing
 
 For further contribution requests
 
@@ -105,15 +103,13 @@ For further contribution requests
 
 
 <!-- CONTACT -->
-## Contact
+# Contact
 
 Project Link: [https://github.com/sparkgeo/terradactile-lambda/](https://github.com/sparkgeo/terradactile-lambda/)
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
 
 Readme template edited by Alex Leamy at SparkGeo Consulting Ltd.
 
 Based off original template from Othniel Drew [https://github.com/othneildrew/Best-README-Template](https://github.com/othneildrew/Best-README-Template)
+
 
 
