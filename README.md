@@ -106,7 +106,6 @@ For further contribution requests
 5. Open a Pull Request
 
 
-
 <!-- LICENSE -->
 ## License
 
@@ -116,12 +115,12 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Project Link: [https://github.com/sparkgeo/](https://github.com/sparkgeo/)
+Project Link: [https://github.com/sparkgeo/terradactile-lambda/](https://github.com/sparkgeo/terradactile-lambda/)
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-Readme template edited by Alex Leamy
+Readme template edited by Alex Leamy at SparkGeo Consulting Ltd.
 
 Based off original template from Othniel Drew [https://github.com/othneildrew/Best-README-Template](https://github.com/othneildrew/Best-README-Template)
 
