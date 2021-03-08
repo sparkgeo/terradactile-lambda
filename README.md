@@ -27,7 +27,9 @@ Terradactile is an API and Lambda function for fetching, assembling, and process
 ```markdown
 File Contents
 - terradactile/terradactile - Code for the application's Lambda function.
-- terradactile/template.yaml - A template that defines the application's AWS resources. **Update the environment variables for BUCKET and ALLOWED_ORIGINS.**
+- terradactile/template.yaml - A template that defines the application's AWS resources. 
+
+**Update the environment variables for BUCKET and ALLOWED_ORIGINS.**
 ```
 
 
