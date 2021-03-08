@@ -104,12 +104,6 @@ For further contribution requests
 5. Open a Pull Request
 
 
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-
 <!-- CONTACT -->
 ## Contact
 
