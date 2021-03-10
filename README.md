@@ -1,7 +1,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/sparkgeo/template-barebones">
-    <img src="./images/sparkgeo-logo.png">
+    <img src="./images/sparkgeo-logo.png" width="100">
   </a>
   <h3 align="center">Terradactile Lambda</h3>
 </p>
