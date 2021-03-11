@@ -16,7 +16,7 @@ from osgeo import gdal
 
 s3 = boto3.resource("s3")
 
-tile_url = "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{z}/{x}/{y}.tif"
+tile_url = "https://s3.amazonaws.com/elevation-tiles-prod/v2/geotiff/{z}/{x}/{y}.tif"
 s3_bucket = environ.get("BUCKET")
 
 def respond(err, res=None, origin=None):
