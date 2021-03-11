@@ -15,7 +15,6 @@
   * [Prerequisites](#prerequisites)
   * [Installation and Deployment](#installation-and-deployment)
 * [Usage](#usage)
-* [Contributing](#contributing)
 * [Contact](#contact)
 
 
@@ -91,19 +90,6 @@ To delete the sample application that you created, use the AWS CLI. Assuming you
 aws cloudformation delete-stack --stack-name terradactile
 ```
 
-
-<!-- CONTRIBUTING -->
-# Contributing
-
-For further contribution requests
-
-1. Fork the Project
-2. Create your Feature Branch 
-3. Commit your Changes 
-4. Push to the Branch 
-5. Open a Pull Request
-
-
 <!-- CONTACT -->
 # Contact
 
@@ -111,7 +97,7 @@ Project Link: [https://github.com/sparkgeo/terradactile-lambda/](https://github.
 
 Readme template edited by Alex Leamy at SparkGeo Consulting Ltd.
 
-Based off original template from Othniel Drew [https://github.com/othneildrew/Best-README-Template](https://github.com/othneildrew/Best-README-Template)
+Based off original template from [Othniel Drew](https://github.com/othneildrew/Best-README-Template)
 
 
 
