@@ -23,13 +23,20 @@
 
 Terradactile is an API and Lambda function for fetching, assembling, and processing elevation data.
 
-```markdown
+
 File Contents
-- terradactile/terradactile - Code for the application's Lambda function.
-- terradactile/template.yaml - A template that defines the application's AWS resources. 
+
+- `terradactile/terradactile` - Code for the application's Lambda function.
+- `terradactile/template.yaml` - A template that defines the application's AWS resources. 
 
 **Update the environment variables for BUCKET and ALLOWED_ORIGINS.**
+
+Sample .env file:
 ```
+export BUCKET=myBucket
+export ALLOWED_ORIGINS=*
+```
+
 
 
 <!-- GETTING STARTED -->
@@ -52,7 +59,7 @@ To use the SAM CLI, you need the following tools.
 * Docker - [Install Docker community edition](https://hub.docker.com/search/?type=edition&offering=community)
 
 
-The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
+The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `/terradactile/template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
 
 
 # Installation and Deployment
@@ -65,6 +72,7 @@ To build and deploy your application for the first time, cd to the project direc
 
 
 ```bash
+cd terradactile-lambda/terradactile/terradactile/
 sam build --use-container
 sam deploy --guided
 ```
